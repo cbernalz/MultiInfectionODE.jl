@@ -1,25 +1,44 @@
+"""
+    MultiInfectionODE_fit_generate(...)
 
+# Arguments
+    - `data_wastewater`: Vector of wastewater measurements.
+    - `obstime_wastewater`: Vector of observation times corresponding to the wastewater measurements.
+    - `s`: Number of sub-compartments for the E and I compartments in the ODE model.
+    - `Rₜ_prior_model`: Prior model for the time-varying reproduction number Rₜ.
+    - `γ_prior`: Prior distribution parameters for the transition rate from E to I (mean and sd on log scale).
+    - `ν_prior`: Prior distribution parameters for the transition rate from I to R (mean and sd on log scale).
+    - `η_prior`: Prior distribution parameters for the transition rate from R to S (mean and sd on log scale).
+    - `σ_ww_prior`: Prior distribution parameters for the standard deviation of the wastewater measurement noise (mean and sd on log scale).
+    - `compartment_priors`: A named tuple containing prior distribution parameters for the initial values of each compartment (mean and sd on log scale).
+    - `n_samples`: Number of posterior samples to draw. Default is 500.
+    - `n_chains`: Number of MCMC chains to run. Default is 1.
+    - `n_discard_initial`: Number of initial samples to discard as burn-in. Default is 0.
+    - `seed`: Random seed for reproducibility. Default is 2024.
+    - `init_params`: Initial parameters for MCMC sampling. Default is nothing, which will use the default initialization of the sampler.
+    - `forecast`: Boolean indicating whether to generate forecasts. Default is false.
+    - `forecast_days`: Number of days to forecast if `forecast` is true. Default is 14.
+
+# Returns
+    A named tuple containing the following fields:
+    - `posterior_predictive`: DataFrame of posterior predictive samples.
+    - `posterior_generated_quantities`: DataFrame of posterior generated quantities.
+    - `posterior_samples`: DataFrame of posterior samples.
+    - `prior_predictive`: DataFrame of prior predictive samples.
+    - `prior_generated_quantities`: DataFrame of prior generated quantities.
+    - `prior_samples`: DataFrame of prior samples.
+
+"""
 function MultiInfectionODE_fit_generate(
     data_wastewater,
     obstime_wastewater,
     s,
     Rₜ_prior_model,
+    init_compartment_prior_model,
     γ_prior = (mean = log(1/7), sd = 0.25),
     ν_prior = (mean = log(1/7), sd = 0.25),
     η_prior = (mean = log(2/18), sd = 0.25),
-    σ_ww_prior = (mean = log(0.1), sd = 0.25),
-    compartment_priors = (
-        E₁_prior = (mean = log(1000.0), sd = 0.5),
-        I₁_prior = (mean = log(5000.0), sd = 0.5),
-        I₂_prior = (mean = log(0.0), sd = 0.5),
-        I₃_prior = (mean = log(0.0), sd = 0.5),
-        I₄_prior = (mean = log(0.0), sd = 0.5),
-        I₅_prior = (mean = log(0.0), sd = 0.5),
-        I₆_prior = (mean = log(0.0), sd = 0.5),
-        I₇_prior = (mean = log(0.0), sd = 0.5),
-        R₁_prior = (mean = log(0.0), sd = 0.5),
-        R₂_prior = (mean = log(0.0), sd = 0.5)
-    );
+    σ_ww_prior = (mean = log(0.1), sd = 0.25);
     n_samples::Int64 = 500, n_chains::Int64 = 1,
     n_discard_initial::Int64 = 0, seed::Int64 = 2024,
     init_params = nothing,
@@ -61,11 +80,11 @@ function MultiInfectionODE_fit_generate(
         obstime_wastewater = obstime_wastewater,
         s = s,
         Rₜ_prior_model = Rₜ_prior_model,
+        init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior,
-        compartment_priors = compartment_priors
+        σ_ww_prior = σ_ww_prior
     )
 
     my_model_gq = multi_infection_ode_model(
@@ -73,11 +92,11 @@ function MultiInfectionODE_fit_generate(
         obstime_wastewater = obstime_wastewater_pred,
         s = s,
         Rₜ_prior_model = Rₜ_prior_model,
+        init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior,
-        compartment_priors = compartment_priors
+        σ_ww_prior = σ_ww_prior
     )
 
     my_model_predictive = multi_infection_ode_model(
@@ -85,11 +104,11 @@ function MultiInfectionODE_fit_generate(
         obstime_wastewater = obstime_wastewater_pred,
         s = s,
         Rₜ_prior_model = Rₜ_prior_model,
+        init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior,
-        compartment_priors = compartment_priors
+        σ_ww_prior = σ_ww_prior
     )
 
 
@@ -185,11 +204,11 @@ function MultiInfectionODE_fit_generate(
     ## Return results ------------------------------
     return (
         posterior_predictive = DataFrame(posterior_predictive),
-        posterior_generated_quantities = posterior_gq,
+        posterior_generated_quantities = posterior_gq_augmented,
         posterior_samples = posterior_samples_df,
 
         prior_predictive = DataFrame(prior_predictive),
-        prior_generated_quantities = prior_gq,
+        prior_generated_quantities = prior_gq_augmented,
         prior_samples = prior_samples_df
     )
 

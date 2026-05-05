@@ -26,13 +26,12 @@ function likelihood_helper(
         ν_prior,
         η_prior,
         σ_ww_prior,
-        compartment_priors,
         γ_non_centered,
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
-        compartment_priors_non_centered,
         Rₜ_module,
+        init_compartment_module
 )
 
     try
@@ -41,16 +40,6 @@ function likelihood_helper(
         ν = exp(ν_prior.mean + ν_prior.sd * ν_non_centered)
         η = exp(η_prior.mean + η_prior.sd * η_non_centered)
         σ_ww = exp(σ_ww_prior.mean + σ_ww_prior.sd * σ_ww_non_centered)
-        E₁ = exp(compartment_priors.E₁_prior.mean + compartment_priors.E₁_prior.sd * compartment_priors_non_centered[1])
-        I₁ = exp(compartment_priors.I₁_prior.mean + compartment_priors.I₁_prior.sd * compartment_priors_non_centered[2])
-        I₂ = exp(compartment_priors.I₂_prior.mean + compartment_priors.I₂_prior.sd * compartment_priors_non_centered[3])
-        I₃ = exp(compartment_priors.I₃_prior.mean + compartment_priors.I₃_prior.sd * compartment_priors_non_centered[4])
-        I₄ = exp(compartment_priors.I₄_prior.mean + compartment_priors.I₄_prior.sd * compartment_priors_non_centered[5])
-        I₅ = exp(compartment_priors.I₅_prior.mean + compartment_priors.I₅_prior.sd * compartment_priors_non_centered[6])
-        I₆ = exp(compartment_priors.I₆_prior.mean + compartment_priors.I₆_prior.sd * compartment_priors_non_centered[7])
-        I₇ = exp(compartment_priors.I₇_prior.mean + compartment_priors.I₇_prior.sd * compartment_priors_non_centered[8])
-        R₁ = exp(compartment_priors.R₁_prior.mean + compartment_priors.R₁_prior.sd * compartment_priors_non_centered[9])
-        R₂ = exp(compartment_priors.R₂_prior.mean + compartment_priors.R₂_prior.sd * compartment_priors_non_centered[10])
 
         # Simulate the model
         ν₁ = 7 * ν
@@ -62,7 +51,9 @@ function likelihood_helper(
         ν₇ = 7 * ν 
 
         αs = Rₜ_module.Rₜ .* ν
-        u0 = [E₁, I₁, I₂, I₃, I₄, I₅, I₆, I₇, R₁, R₂, 0.0]  
+        u0 = [
+            init_compartment_module.compartment₁.E, 
+            init_compartment_module.compartment₁.I₁, init_compartment_module.compartment₁.I₂, init_compartment_module.compartment₁.I₃, init_compartment_module.compartment₁.I₄, init_compartment_module.compartment₁.I₅, init_compartment_module.compartment₁.I₆, init_compartment_module.compartment₁.I₇, init_compartment_module.compartment₁.R₁, init_compartment_module.compartment₁.R₂, 0.0]  
         p = (αs, γ, ν₁, ν₂, ν₃, ν₄, ν₅, ν₆, ν₇, η, η, Rₜ_module.timebreaks)
         tspan = (minimum(obstime_wastewater), maximum(obstime_wastewater))
         prob = ODEProblem(multi_i_ode!, u0, tspan, p, saveat = obstime_wastewater)
@@ -70,13 +61,14 @@ function likelihood_helper(
         sol = solve(prob, Tsit5(); verbose=false)
         # If the ODE solver fails, reject the sample by adding -Inf to the likelihood
         if sol.retcode != ReturnCode.Success
-            throw(ArgumentError("ODE solver failed!!!"))
+            @warn "ODE solver failed. " retcode = sol.retcode
+            return(success = false,)
         end
         
         sol_array = Array(sol)
         sol_array .= clamp.(sol_array, 1, 1e10)
         sol_nt = (
-            E₁ = sol_array[1, :],
+            E = sol_array[1, :],
             I₁ = sol_array[2, :],
             I₂ = sol_array[3, :],
             I₃ = sol_array[4, :],
@@ -86,7 +78,7 @@ function likelihood_helper(
             I₇ = sol_array[8, :],
             R₁ = sol_array[9, :],
             R₂ = sol_array[10, :],
-            W = sol_array[11, :]
+            R = sol_array[11, :]
         )
 
         I_means = sol_array[2, :] + sol_array[3, :] + sol_array[4, :] + sol_array[5, :] + sol_array[6, :] + sol_array[7, :] + sol_array[8, :]
@@ -102,7 +94,7 @@ function likelihood_helper(
             s[7] .* sol_array[8, :] .+ # I7
             s[8] .* sol_array[9, :] .+ # R1
             s[9] .* sol_array[10, :]    # R2
-        log_W_means = log.(w_mean) 
+        log_W_means = log.(clamp.(w_mean, 1e-12, Inf))
 
 
         return (
@@ -114,7 +106,8 @@ function likelihood_helper(
             Rₜ_params = Rₜ_module.params,
             ode_parameters = (γ = γ, ν = ν, η = η),
             σ_ww = σ_ww,
-            compartment₁ = (E₁ = E₁, I₁ = I₁, I₂ = I₂, I₃ = I₃, I₄ = I₄, I₅ = I₅, I₆ = I₆, I₇ = I₇, R₁ = R₁, R₂ = R₂),
+            compartment₁ = init_compartment_module.compartment₁,
+            compartment₁_params = init_compartment_module.params,
             ode_solution = (t = sol.t, states = sol_nt)
         )
 

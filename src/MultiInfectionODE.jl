@@ -4,6 +4,7 @@ module MultiInfectionODE
 using Random
 using Distributions
 using Turing
+using DynamicPPL: to_submodel
 using StatsBase
 using LineSearches
 using AxisArrays
@@ -24,12 +25,14 @@ include("generate_pq_pp.jl")
 include("rt_prior_models.jl")
 include("helpers.jl")
 include("MultiInfectionODE_fit_generate.jl")
+include("init_compartment_prior_models.jl")
 
 # export
 export multi_i_ode!
 export likelihood_helper
 export multi_infection_ode_model
 export MultiInfectionODE_fit_generate
+export exp_init_compartment_prior_model, custom_init_compartment_prior_model
 export fit
 export generate_pq_pp
 export Rₜ_rw_prior_model

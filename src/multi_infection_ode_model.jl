@@ -5,33 +5,21 @@
     obstime_wastewater,
     s,
     Rₜ_prior_model,
+    init_compartment_prior_model,
     γ_prior = (mean = log(1/7), sd = 0.25),
     ν_prior = (mean = log(1/7), sd = 0.25),
     η_prior = (mean = log(2/18), sd = 0.25),
-    σ_ww_prior = (mean = log(0.1), sd = 0.25),
-    compartment_priors = (
-        E₁_prior = (mean = log(1000.0), sd = 0.5),
-        I₁_prior = (mean = log(5000.0), sd = 0.5),
-        I₂_prior = (mean = log(0.0), sd = 0.5),
-        I₃_prior = (mean = log(0.0), sd = 0.5),
-        I₄_prior = (mean = log(0.0), sd = 0.5),
-        I₅_prior = (mean = log(0.0), sd = 0.5),
-        I₆_prior = (mean = log(0.0), sd = 0.5),
-        I₇_prior = (mean = log(0.0), sd = 0.5),
-        R₁_prior = (mean = log(0.0), sd = 0.5),
-        R₂_prior = (mean = log(0.0), sd = 0.5)
-    )
+    σ_ww_prior = (mean = log(0.1), sd = 0.25)
 )
 
     # PRIORS-----------------------------
     γ_non_centered ~ Normal()
     ν_non_centered ~ Normal()
     η_non_centered ~ Normal()
-    Rₜ_module ~ to_submodel(Rₜ_prior_model)
+    Rₜ_module ~ Turing.to_submodel(Rₜ_prior_model)
+    init_compartment_module ~ Turing.to_submodel(init_compartment_prior_model)
 
     σ_ww_non_centered ~ Normal()
-
-    compartment_priors_non_centered ~ filldist(Normal(), 10)
 
     # TRANSFORMATIONS-----------------------------
     trans = likelihood_helper(
@@ -41,13 +29,12 @@
         ν_prior,
         η_prior,
         σ_ww_prior,
-        compartment_priors,
         γ_non_centered,
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
-        compartment_priors_non_centered,
         Rₜ_module,
+        init_compartment_module
     )
 
     # Reject if the helper function failed and skip sample
@@ -68,7 +55,7 @@
         Rₜ = trans.Rₜ, Rₜ_params = trans.Rₜ_params,
         σ_ww = trans.σ_ww,
         ode_parameters = trans.ode_parameters,
-        compartment₁ = trans.compartment₁,
+        compartment₁ = trans.compartment₁, compartment₁_params = trans.compartment₁_params,
         ode_solution = trans.ode_solution
     )
 
