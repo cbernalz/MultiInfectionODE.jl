@@ -32,7 +32,6 @@
 function MultiInfectionODE_fit_generate(
     data_wastewater,
     obstime_wastewater,
-    s,
     Rₜ_prior_model,
     init_compartment_prior_model,
     γ_prior = (mean = log(1/7), sd = 0.25),
@@ -58,8 +57,6 @@ function MultiInfectionODE_fit_generate(
 
         data_wastewater_fit = data_wastewater
 
-        # Placeholder values only so generated_quantities can run on forecast times.
-        # Predictive simulation uses my_model_predictive with missing observations.
         data_wastewater_gq = vcat(
             data_wastewater,
             repeat([data_wastewater[end]], forecast_days)
@@ -78,7 +75,6 @@ function MultiInfectionODE_fit_generate(
     my_model_fit = multi_infection_ode_model(
         data_wastewater = data_wastewater_fit,
         obstime_wastewater = obstime_wastewater,
-        s = s,
         Rₜ_prior_model = Rₜ_prior_model,
         init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,
@@ -90,7 +86,6 @@ function MultiInfectionODE_fit_generate(
     my_model_gq = multi_infection_ode_model(
         data_wastewater = data_wastewater_gq,
         obstime_wastewater = obstime_wastewater_pred,
-        s = s,
         Rₜ_prior_model = Rₜ_prior_model,
         init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,
@@ -102,7 +97,6 @@ function MultiInfectionODE_fit_generate(
     my_model_predictive = multi_infection_ode_model(
         data_wastewater = missing_data_wastewater,
         obstime_wastewater = obstime_wastewater_pred,
-        s = s,
         Rₜ_prior_model = Rₜ_prior_model,
         init_compartment_prior_model = init_compartment_prior_model,
         γ_prior = γ_prior,

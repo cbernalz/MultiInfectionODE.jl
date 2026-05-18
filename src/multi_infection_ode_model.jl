@@ -3,7 +3,6 @@
 @model function multi_infection_ode_model(;
     data_wastewater,
     obstime_wastewater,
-    s,
     Rₜ_prior_model,
     init_compartment_prior_model,
     γ_prior = (mean = log(1/7), sd = 0.25),
@@ -24,7 +23,6 @@
     # TRANSFORMATIONS-----------------------------
     trans = likelihood_helper(
         obstime_wastewater,
-        s,
         γ_prior,
         ν_prior,
         η_prior,

@@ -21,7 +21,6 @@ Helper function to compute the likelihood components for the MvFInfectionAge mod
 """
 function likelihood_helper(
         obstime_wastewater,
-        s,
         γ_prior,
         ν_prior,
         η_prior,
@@ -41,74 +40,41 @@ function likelihood_helper(
         η = exp(η_prior.mean + η_prior.sd * η_non_centered)
         σ_ww = exp(σ_ww_prior.mean + σ_ww_prior.sd * σ_ww_non_centered)
 
-        # Simulate the model
-        ν₁ = 7 * ν
-        ν₂ = 7 * ν
-        ν₃ = 7 * ν
-        ν₄ = 7 * ν
-        ν₅ = 7 * ν
-        ν₆ = 7 * ν
-        ν₇ = 7 * ν 
-
-        αs = Rₜ_module.Rₜ .* ν
-        u0 = [
-            init_compartment_module.compartment₁.E, 
-            init_compartment_module.compartment₁.I₁, init_compartment_module.compartment₁.I₂, init_compartment_module.compartment₁.I₃, init_compartment_module.compartment₁.I₄, init_compartment_module.compartment₁.I₅, init_compartment_module.compartment₁.I₆, init_compartment_module.compartment₁.I₇, init_compartment_module.compartment₁.R₁, init_compartment_module.compartment₁.R₂, 0.0]  
-        p = (αs, γ, ν₁, ν₂, ν₃, ν₄, ν₅, ν₆, ν₇, η, η, Rₜ_module.timebreaks)
-        tspan = (minimum(obstime_wastewater), maximum(obstime_wastewater))
-        prob = ODEProblem(multi_i_ode!, u0, tspan, p, saveat = obstime_wastewater)
-
-        sol = solve(prob, Tsit5(); verbose=false)
-        # If the ODE solver fails, reject the sample by adding -Inf to the likelihood
-        if sol.retcode != ReturnCode.Success
-            @warn "ODE solver failed. " retcode = sol.retcode
-            return(success = false,)
-        end
-        
-        sol_array = Array(sol)
-        sol_array .= clamp.(sol_array, 1, 1e10)
-        sol_nt = (
-            E = sol_array[1, :],
-            I₁ = sol_array[2, :],
-            I₂ = sol_array[3, :],
-            I₃ = sol_array[4, :],
-            I₄ = sol_array[5, :],
-            I₅ = sol_array[6, :],
-            I₆ = sol_array[7, :],
-            I₇ = sol_array[8, :],
-            R₁ = sol_array[9, :],
-            R₂ = sol_array[10, :],
-            R = sol_array[11, :]
+        prob = setup_multi_i_ode_problem(
+            obstime_wastewater = obstime_wastewater,
+            Rₜ_module = Rₜ_module,
+            init_compartment_module = init_compartment_module,
+            γ = γ,
+            ν = ν,
+            η = η
         )
 
-        I_means = sol_array[2, :] + sol_array[3, :] + sol_array[4, :] + sol_array[5, :] + sol_array[6, :] + sol_array[7, :] + sol_array[8, :]
+        sol = solve(prob, Tsit5(); verbose = false)
 
-        # Wastewater means with attached shedding to compartments
-        w_mean = 
-            s[1] .* sol_array[2, :] .+ # I1
-            s[2] .* sol_array[3, :] .+ # I2
-            s[3] .* sol_array[4, :] .+ # I3
-            s[4] .* sol_array[5, :] .+ # I4
-            s[5] .* sol_array[6, :] .+ # I5
-            s[6] .* sol_array[7, :] .+ # I6
-            s[7] .* sol_array[8, :] .+ # I7
-            s[8] .* sol_array[9, :] .+ # R1
-            s[9] .* sol_array[10, :]    # R2
+        if sol.retcode != ReturnCode.Success
+            @warn "ODE solver failed." retcode = sol.retcode
+            return (success = false,)
+        end
+
+        sol_array = Array(sol)
+        sol_array .= clamp.(sol_array, 1, 1e10)
+
+        unpacked = unpack_multi_i_solution(sol_array, init_compartment_module)
+        w_mean = wastewater_mean(sol_array, init_compartment_module)
         log_W_means = log.(clamp.(w_mean, 1e-12, Inf))
-
 
         return (
             success = true,
             log_W_means = log_W_means,
-            I_means = I_means,
-            αₜ = αs,
+            I_means = unpacked.I_means,
+            αₜ = prob.p.αs,
             Rₜ = Rₜ_module.Rₜ,
             Rₜ_params = Rₜ_module.params,
             ode_parameters = (γ = γ, ν = ν, η = η),
             σ_ww = σ_ww,
             compartment₁ = init_compartment_module.compartment₁,
             compartment₁_params = init_compartment_module.params,
-            ode_solution = (t = sol.t, states = sol_nt)
+            ode_solution = (t = sol.t, states = unpacked.states)
         )
 
     catch e

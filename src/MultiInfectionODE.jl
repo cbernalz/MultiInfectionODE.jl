@@ -28,7 +28,7 @@ include("MultiInfectionODE_fit_generate.jl")
 include("init_compartment_prior_models.jl")
 
 # export
-export multi_i_ode!
+export multi_i_ode!, setup_multi_i_ode_problem, wastewater_mean, unpack_multi_i_solution
 export likelihood_helper
 export multi_infection_ode_model
 export MultiInfectionODE_fit_generate

@@ -15,3 +15,44 @@ function ChainsCustomIndex(c::Chains, indices_to_keep::BitMatrix)
 
   Chains(aa, c.logevidence, c.name_map, c.info)
 end
+
+
+
+function wastewater_mean(sol_array, init_compartment_module)
+
+    n_I = init_compartment_module.ode_config.n_I
+    n_R = init_compartment_module.ode_config.n_R
+    include_R_shedding = init_compartment_module.ode_config.include_R_shedding
+    s = init_compartment_module.ode_config.shedding_weights
+
+    I_rows = 2:(n_I + 1)
+
+    if include_R_shedding
+        expected_length = n_I + n_R
+
+        if length(s) != expected_length
+            throw(ArgumentError(
+                "shedding_weights must have length n_I + n_R when include_R_shedding = true. " *
+                "Got $(length(s)), expected $(expected_length)."
+            ))
+        end
+
+        shedding_rows = 2:(n_I + n_R + 1)
+
+    else
+        expected_length = n_I
+
+        if length(s) != expected_length
+            throw(ArgumentError(
+                "shedding_weights must have length n_I when include_R_shedding = false. " *
+                "Got $(length(s)), expected $(expected_length)."
+            ))
+        end
+
+        shedding_rows = I_rows
+    end
+
+    shedding_states = sol_array[shedding_rows, :]
+
+    return vec(sum(s .* shedding_states, dims = 1))
+end
