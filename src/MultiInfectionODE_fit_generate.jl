@@ -106,29 +106,33 @@ function MultiInfectionODE_fit_generate(
     )
 
 
+    timing = Dict{Symbol, Float64}()
+
     ## Posterior Sampling ------------------------------
     println("Sampling from posterior...")
     Random.seed!(seed)
 
-    if init_params === nothing
-        samples = sample(
-            my_model_fit,
-            NUTS(),
-            MCMCThreads(),
-            n_samples,
-            n_chains;
-            discard_initial = n_discard_initial
-        )
-    else
-        samples = sample(
-            my_model_fit,
-            NUTS(),
-            MCMCThreads(),
-            n_samples,
-            n_chains;
-            discard_initial = n_discard_initial,
-            init_params = init_params
-        )
+    timing[:posterior_sampling] = @elapsed begin
+        if init_params === nothing
+            samples = sample(
+                my_model_fit,
+                NUTS(),
+                MCMCThreads(),
+                n_samples,
+                n_chains;
+                discard_initial = n_discard_initial
+            )
+        else
+            samples = sample(
+                my_model_fit,
+                NUTS(),
+                MCMCThreads(),
+                n_samples,
+                n_chains;
+                discard_initial = n_discard_initial,
+                init_params = init_params
+            )
+        end
     end
 
     posterior_samples_df = DataFrame(samples)
@@ -136,65 +140,74 @@ function MultiInfectionODE_fit_generate(
 
 
     ## Posterior Predictive and Generated Quantities ------------------------------
-    posterior_gq_raw = generated_quantities(my_model_gq, samples)
-    posterior_indices_to_keep = .!isnothing.(posterior_gq_raw)
-    posterior_samples_keep = ChainsCustomIndex(samples, posterior_indices_to_keep)
+    timing[:posterior_generation] = @elapsed begin
+        posterior_gq_raw = generated_quantities(my_model_gq, samples)
+        posterior_indices_to_keep = .!isnothing.(posterior_gq_raw)
+        posterior_samples_keep = ChainsCustomIndex(samples, posterior_indices_to_keep)
 
-    Random.seed!(seed)
-    posterior_predictive = predict(my_model_predictive, posterior_samples_keep)
+        Random.seed!(seed)
+        posterior_predictive = predict(my_model_predictive, posterior_samples_keep)
 
-    println("Generating posterior quantities...")
-    posterior_gq = generated_quantities(my_model_gq, posterior_samples_keep)
-    println("Generation of posterior quantities complete.")
+        println("Generating posterior quantities...")
+        posterior_gq = generated_quantities(my_model_gq, posterior_samples_keep)
+        println("Generation of posterior quantities complete.")
 
-    chains = DataFrame(posterior_samples_keep).chain
-    iters = DataFrame(posterior_samples_keep).iteration
-    posterior_gq_augmented = [
-        merge(posterior_gq[i], (
-            chain = chains[i],
-            iteration = iters[i]
-        ))
-        for i in eachindex(posterior_gq)
-    ]
+        chains = DataFrame(posterior_samples_keep).chain
+        iters = DataFrame(posterior_samples_keep).iteration
+        posterior_gq_augmented = [
+            merge(posterior_gq[i], (
+                chain = chains[i],
+                iteration = iters[i]
+            ))
+            for i in eachindex(posterior_gq)
+        ]
+    end
 
     ## Prior Sampling ------------------------------
     println("Sampling from prior...")
     Random.seed!(seed)
 
-    prior_samples = sample(
-        my_model_gq,
-        Prior(),
-        MCMCThreads(),
-        400,
-        1
-    )
+    timing[:prior_sampling] = @elapsed begin
+        prior_samples = sample(
+            my_model_gq,
+            Prior(),
+            MCMCThreads(),
+            400,
+            1
+        )
+    end
 
     prior_samples_df = DataFrame(prior_samples)
     println("Prior sampling complete.")
 
 
     ## Prior Predictive and Generated Quantities ------------------------------
-    prior_gq_raw = generated_quantities(my_model_gq, prior_samples)
-    prior_indices_to_keep = .!isnothing.(prior_gq_raw)
-    prior_samples_keep = ChainsCustomIndex(prior_samples, prior_indices_to_keep)
+    timing[:prior_generation] = @elapsed begin
+        prior_gq_raw = generated_quantities(my_model_gq, prior_samples)
+        prior_indices_to_keep = .!isnothing.(prior_gq_raw)
+        prior_samples_keep = ChainsCustomIndex(prior_samples, prior_indices_to_keep)
 
-    Random.seed!(seed)
-    prior_predictive = predict(my_model_predictive, prior_samples_keep)
+        Random.seed!(seed)
+        prior_predictive = predict(my_model_predictive, prior_samples_keep)
 
-    println("Generating prior quantities...")
-    prior_gq = generated_quantities(my_model_gq, prior_samples_keep)
-    println("Generation of prior quantities complete.")
+        println("Generating prior quantities...")
+        prior_gq = generated_quantities(my_model_gq, prior_samples_keep)
+        println("Generation of prior quantities complete.")
 
-    chains = DataFrame(prior_samples_keep).chain
-    iters = DataFrame(prior_samples_keep).iteration
-    prior_gq_augmented = [
-        merge(prior_gq[i], (
-            chain = chains[i],
-            iteration = iters[i]
-        ))
-        for i in eachindex(prior_gq)
-    ]
+        chains = DataFrame(prior_samples_keep).chain
+        iters = DataFrame(prior_samples_keep).iteration
+        prior_gq_augmented = [
+            merge(prior_gq[i], (
+                chain = chains[i],
+                iteration = iters[i]
+            ))
+            for i in eachindex(prior_gq)
+        ]
+    end
 
+    timing[:posterior_total] = timing[:posterior_sampling] + timing[:posterior_generation]
+    timing[:prior_total] = timing[:prior_sampling] + timing[:prior_generation]
+    timing[:total] = timing[:posterior_total] + timing[:prior_total]
     ## Return results ------------------------------
     return (
         posterior_predictive = DataFrame(posterior_predictive),
@@ -203,7 +216,9 @@ function MultiInfectionODE_fit_generate(
 
         prior_predictive = DataFrame(prior_predictive),
         prior_generated_quantities = prior_gq_augmented,
-        prior_samples = prior_samples_df
+        prior_samples = prior_samples_df,
+
+        timing = (; timing...)
     )
 
 end
