@@ -37,7 +37,8 @@ function MultiInfectionODE_fit_generate(
     γ_prior = (mean = log(1/7), sd = 0.25),
     ν_prior = (mean = log(1/7), sd = 0.25),
     η_prior = (mean = log(2/18), sd = 0.25),
-    σ_ww_prior = (mean = log(0.1), sd = 0.25);
+    σ_ww_prior = (mean = log(0.1), sd = 0.25),
+    ρ_prior = (mean = log(1), sd = 0.025);
     n_samples::Int64 = 500, n_chains::Int64 = 1,
     n_discard_initial::Int64 = 0, seed::Int64 = 2024,
     init_params = nothing,
@@ -80,7 +81,8 @@ function MultiInfectionODE_fit_generate(
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior
+        σ_ww_prior = σ_ww_prior,
+        ρ_prior = ρ_prior
     )
 
     my_model_gq = multi_infection_ode_model(
@@ -91,7 +93,8 @@ function MultiInfectionODE_fit_generate(
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior
+        σ_ww_prior = σ_ww_prior,
+        ρ_prior = ρ_prior
     )
 
     my_model_predictive = multi_infection_ode_model(
@@ -102,7 +105,8 @@ function MultiInfectionODE_fit_generate(
         γ_prior = γ_prior,
         ν_prior = ν_prior,
         η_prior = η_prior,
-        σ_ww_prior = σ_ww_prior
+        σ_ww_prior = σ_ww_prior,
+        ρ_prior = ρ_prior
     )
 
 

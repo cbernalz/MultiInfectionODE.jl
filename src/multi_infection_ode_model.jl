@@ -8,7 +8,8 @@
     γ_prior = (mean = log(1/7), sd = 0.25),
     ν_prior = (mean = log(1/7), sd = 0.25),
     η_prior = (mean = log(2/18), sd = 0.25),
-    σ_ww_prior = (mean = log(0.1), sd = 0.25)
+    σ_ww_prior = (mean = log(0.1), sd = 0.25),
+    ρ_prior = (mean = log(1), sd = 0.025)
 )
 
     # PRIORS-----------------------------
@@ -19,6 +20,7 @@
     init_compartment_module ~ Turing.to_submodel(init_compartment_prior_model)
 
     σ_ww_non_centered ~ Normal()
+    ρ_non_centered ~ Normal()
 
     # TRANSFORMATIONS-----------------------------
     trans = likelihood_helper(
@@ -31,6 +33,7 @@
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
+        ρ_non_centered,
         Rₜ_module,
         init_compartment_module
     )
@@ -44,7 +47,7 @@
 
     # Likelihood calculations------------
     for i in 1:length(obstime_wastewater)
-        data_wastewater[i] ~ Normal(trans.log_W_means[i], trans.σ_ww)   
+        data_wastewater[i] ~ Normal(trans.log_W_means[i] + trans.ρ, trans.σ_ww)   
     end
 
     return (
@@ -52,6 +55,7 @@
         αₜ  = trans.αₜ,
         Rₜ = trans.Rₜ, Rₜ_params = trans.Rₜ_params,
         σ_ww = trans.σ_ww,
+        ρ = trans.ρ,
         ode_parameters = trans.ode_parameters,
         compartment₁ = trans.compartment₁, compartment₁_params = trans.compartment₁_params,
         ode_solution = trans.ode_solution

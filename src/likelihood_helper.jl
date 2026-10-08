@@ -25,10 +25,12 @@ function likelihood_helper(
         ν_prior,
         η_prior,
         σ_ww_prior,
+        ρ_prior,
         γ_non_centered,
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
+        ρ_non_centered,
         Rₜ_module,
         init_compartment_module
 )
@@ -39,6 +41,7 @@ function likelihood_helper(
         ν = exp(ν_prior.mean + ν_prior.sd * ν_non_centered)
         η = exp(η_prior.mean + η_prior.sd * η_non_centered)
         σ_ww = exp(σ_ww_prior.mean + σ_ww_prior.sd * σ_ww_non_centered)
+        ρ = exp(ρ_prior.mean + ρ_prior.sd * ρ_non_centered)
 
         prob = setup_multi_i_ode_problem(
             obstime_wastewater = obstime_wastewater,
@@ -72,6 +75,7 @@ function likelihood_helper(
             Rₜ_params = Rₜ_module.params,
             ode_parameters = (γ = γ, ν = ν, η = η),
             σ_ww = σ_ww,
+            ρ = ρ,
             compartment₁ = init_compartment_module.compartment₁,
             compartment₁_params = init_compartment_module.params,
             ode_solution = (t = sol.t, states = unpacked.states)

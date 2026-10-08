@@ -20,8 +20,6 @@ using OrdinaryDiffEq
 include("multi_i_ode.jl")
 include("likelihood_helper.jl")
 include("multi_infection_ode_model.jl")
-include("fit.jl")
-include("generate_pq_pp.jl")
 include("rt_prior_models.jl")
 include("helpers.jl")
 include("MultiInfectionODE_fit_generate.jl")
@@ -33,8 +31,6 @@ export likelihood_helper
 export multi_infection_ode_model
 export MultiInfectionODE_fit_generate
 export exp_init_compartment_prior_model, custom_init_compartment_prior_model
-export fit
-export generate_pq_pp
 export Rₜ_rw_prior_model
 export Rₜ_ibm_prior_model
 export Rₜ_ibm_prior_model_loop
