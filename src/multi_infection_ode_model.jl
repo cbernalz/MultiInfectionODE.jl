@@ -29,6 +29,7 @@
         ν_prior,
         η_prior,
         σ_ww_prior,
+        ρ_prior,
         γ_non_centered,
         ν_non_centered,
         η_non_centered,
