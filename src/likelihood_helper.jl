@@ -30,7 +30,7 @@ function likelihood_helper(
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
-        ρ_non_centered,
+        ρ,
         Rₜ_module,
         init_compartment_module
 )
@@ -41,7 +41,6 @@ function likelihood_helper(
         ν = exp(ν_prior.mean + ν_prior.sd * ν_non_centered)
         η = exp(η_prior.mean + η_prior.sd * η_non_centered)
         σ_ww = exp(σ_ww_prior.mean + σ_ww_prior.sd * σ_ww_non_centered)
-        ρ = exp(ρ_prior.mean + ρ_prior.sd * ρ_non_centered)
 
         prob = setup_multi_i_ode_problem(
             obstime_wastewater = obstime_wastewater,
