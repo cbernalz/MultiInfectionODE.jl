@@ -133,7 +133,7 @@ function unpack_multi_i_solution(sol_array, init_compartment_module)
 
     R = sol_array[n_I + n_R + 2, :]
 
-    I_means = vec(sum(sol_array[2:(n_I + 1), :], dims = 1))
+    I_means = vec(sum(sol_array[1:(n_I + 1), :], dims = 1))
 
     return (
         states = (
