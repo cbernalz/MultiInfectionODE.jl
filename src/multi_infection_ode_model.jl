@@ -9,7 +9,7 @@
     ν_prior = (mean = log(1/7), sd = 0.25),
     η_prior = (mean = log(2/18), sd = 0.25),
     σ_ww_prior = (mean = log(0.1), sd = 0.25),
-    ρ_prior = (mean = 1.0, sd = 1.0)
+    ρ_prior = (mean = log(0.1), sd = 0.5)
 )
 
     # PRIORS-----------------------------
@@ -20,7 +20,7 @@
     init_compartment_module ~ Turing.to_submodel(init_compartment_prior_model)
 
     σ_ww_non_centered ~ Normal()
-    ρ ~ Gamma(ρ_prior.mean^2 / ρ_prior.sd^2, ρ_prior.sd^2 / ρ_prior.mean)
+    ρ_non_centered ~ Normal()
 
     # TRANSFORMATIONS-----------------------------
     trans = likelihood_helper(
@@ -34,7 +34,7 @@
         ν_non_centered,
         η_non_centered,
         σ_ww_non_centered,
-        ρ,
+        ρ_non_centered,
         Rₜ_module,
         init_compartment_module
     )
