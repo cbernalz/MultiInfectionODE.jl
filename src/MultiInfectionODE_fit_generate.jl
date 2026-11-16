@@ -120,7 +120,7 @@ function MultiInfectionODE_fit_generate(
         if init_params === nothing
             samples = sample(
                 my_model_fit,
-                NUTS(),
+                MH(),
                 MCMCThreads(),
                 n_samples,
                 n_chains;
@@ -129,7 +129,7 @@ function MultiInfectionODE_fit_generate(
         else
             samples = sample(
                 my_model_fit,
-                NUTS(),
+                MH(),
                 MCMCThreads(),
                 n_samples,
                 n_chains;
