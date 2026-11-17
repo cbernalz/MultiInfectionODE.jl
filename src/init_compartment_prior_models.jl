@@ -78,7 +78,8 @@ end
         shedding_weights = nothing
     ),
     E_prior = (mean = log(700.0), sd = 0.25),
-    I_priors = (mean = log(100.0), sd = 0.25)
+    I_priors = (mean = log(100.0), sd = 0.25),
+    R1_prior = (mean = log(8000.0), sd = 0.25)
 )
 
     n_I = ode_config.n_I
@@ -89,6 +90,7 @@ end
     for j in 1:n_I
         I_non_centered[j] ~ Normal()
     end
+    R1_non_centered ~ Normal()
 
     E = exp(E_prior.mean + E_prior.sd * E_non_centered)
 
@@ -96,6 +98,7 @@ end
         exp(I_priors.mean + I_priors.sd * I_non_centered[j])
         for j in 1:n_I
     ]
+    R1 = exp(R1_prior.mean + R1_prior.sd * R1_non_centered)
 
     if ode_config.shedding_weights === nothing
         if ode_config.include_R_shedding
@@ -111,7 +114,7 @@ end
         compartment₁ = (
             E = E,
             I = I,
-            R_stage = zeros(n_R),
+            R_stage = n_R == 0 ? zeros(0) : [R1; zeros(n_R - 1)],
             R = 0.0
         ),
         ode_config = (
